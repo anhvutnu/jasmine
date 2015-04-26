@@ -66,6 +66,9 @@ public class Adapters {
                 while (it.hasNext()) {
                     if (!first) {
                         r.add(it.next());
+                    } else {
+                        it.next();
+                        first = false;
                     }
                 }
 

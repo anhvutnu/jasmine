@@ -1,12 +1,58 @@
 package group.funsoft.jasmine;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+/**
+ * 
+ * @author Vu Chu
+ *
+ */
 public class Functors {
+    
+    /**
+     * 
+     * @param f
+     * @param cons
+     * @return
+     */
+    public static <K, X> Map<K, Collection<X>> groupBy(
+            Function<X, K> f, 
+            Collection<X> cons
+    ) {
+       return groupBy(f, cons, Adapters::collectionConsAdapter); 
+    }
+    
+    /**
+     * 
+     * @param f
+     * @param cons
+     * @param consAdapterYSupplier
+     * @return
+     */
+    public static <K,Y, X> Map<K, Y> groupBy(
+            Function<X, K> f, 
+            Y cons,
+            Supplier<ConsAdapter<X, Y>> consAdapterYSupplier) {
+        
+        ConsAdapter<X, Y> adapter = consAdapterYSupplier.get();
+        
+        BiFunction<X, Map<K, Y>, Map<K, Y>> accumulator = (X x, Map<K, Y> accumulated)-> {
+           K key = f.apply(x);
+           Y c = accumulated.containsKey(key) ? accumulated.get(key) : adapter.empty();
+           accumulated.put(key, adapter.add(x, c));
+           
+           return accumulated;
+        };
+        
+        return foldr(accumulator, new HashMap<K, Y>(), cons, consAdapterYSupplier);
+    }  
     
     /**
      * 
@@ -25,20 +71,53 @@ public class Functors {
      * @param consAdpaterYSupplier
      * @return
      */
-    public static <X, Y> Boolean all(Predicate<X> p , Y cons, Supplier<ConsAdapter<X, Y>> consAdpaterYSupplier) {
-       return foldr((X value, Boolean bCons)-> p.test(value) && bCons,
+    public static <X, Y> Boolean all(
+            Predicate<X> p,
+            Y cons,
+            Supplier<ConsAdapter<X, Y>> consAdapterYSupplier) {
+       
+        return foldr((X value, Boolean bCons)-> p.test(value) && bCons,
                     true,
                     cons,
-                    consAdpaterYSupplier); 
+                    consAdapterYSupplier); 
      }
-     
+    
+    /**
+     * 
+     * @param x
+     * @param cons
+     * @return
+     */
+    public static <X> boolean member (X x, Collection<X> cons) {
+        return member(x, cons, Adapters::collectionConsAdapter);
+    }
+    
+    /**
+     * 
+     * @param x
+     * @param cons
+     * @param consAdapterYSupplier
+     * @return
+     */
+    public static <X, Y> boolean member(
+            X x, 
+            Y cons,
+            Supplier<ConsAdapter<X, Y>> consAdapterYSupplier
+    ) {
+        
+        return any(item -> item.equals(x), cons, consAdapterYSupplier);
+    }
+    
     /**
      * 
      * @param p
      * @param cons
      * @return
      */
-     public static <X> Boolean any(Predicate<X> p , Collection<X> cons) {
+     public static <X> Boolean any(
+             Predicate<X> p,
+             Collection<X> cons
+     ) {
          return any(p, cons, Adapters::collectionConsAdapter);
      }
      
@@ -49,13 +128,18 @@ public class Functors {
      * @param consAdapterYSupplier
      * @return
      */
-    public static <X, Y> Boolean any(Predicate<X> p, Y cons, Supplier<ConsAdapter<X, Y>> consAdapterYSupplier) {
+    public static <X, Y> Boolean any(
+            Predicate<X> p,
+            Y cons,
+            Supplier<ConsAdapter<X, Y>> consAdapterYSupplier
+    ) {
         
        return foldr((X value, Boolean bCons) -> p.test(value) || bCons, 
                     false,
                     cons,
                     consAdapterYSupplier);
     }
+    
     
     /**
      * 
@@ -72,7 +156,11 @@ public class Functors {
      * @param consAdapterYSupplier
      * @return
      */
-    public static <X, Y> Y rest(Y cons, Supplier<ConsAdapter<X, Y>> consAdapterYSupplier) {
+    public static <X, Y> Y rest(
+            Y cons,
+            Supplier<ConsAdapter<X, Y>> consAdapterYSupplier
+    ) {
+        
         ConsAdapter<X, Y> adapter = consAdapterYSupplier.get();
         return adapter.getRest(cons);
     }
@@ -92,7 +180,10 @@ public class Functors {
      * @param consAdpaterYSupplier
      * @return
      */
-    public static <X, Y> X first(Y cons, Supplier<ConsAdapter<X, Y>> consAdpaterYSupplier) {
+    public static <X, Y> X first(
+            Y cons,
+            Supplier<ConsAdapter<X, Y>> consAdpaterYSupplier
+    ) {
         ConsAdapter<X, Y> adapter = consAdpaterYSupplier.get();
         return adapter.getFirst(cons);
     }
@@ -114,7 +205,12 @@ public class Functors {
      * @param adapterYSupplier
      * @return
      */
-     public static <X, Y> Optional<X> first(Predicate<X> p, Y cons, Supplier<ConsAdapter<X, Y>> adapterYSupplier) {
+     public static <X, Y> Optional<X> first(
+             Predicate<X> p,
+             Y cons,
+             Supplier<ConsAdapter<X, Y>> adapterYSupplier
+     ) {
+         
          ConsAdapter<X, Y> adapterY = adapterYSupplier.get();
          
          if (adapterY.isNil(cons)) {
@@ -130,14 +226,18 @@ public class Functors {
          return first(p, adapterY.getRest(cons), adapterYSupplier);
      }
      
+     
     /**
      * 
      * @param p
      * @param cons
      * @return
      */
-    public static <X> Collection<X> filter(Predicate<X> p , Collection<X> cons) {
-        return filter(p, cons, Adapters::collectionConsAdapter);
+    public static <X> Collection<X> filter(
+            Predicate<X> p,
+            Collection<X> cons
+    ) {
+       return filter(p, cons, Adapters::collectionConsAdapter);
     }
     
     /**
@@ -147,8 +247,14 @@ public class Functors {
      * @param consAdapterYSupplier
      * @return
      */
-    public static <X, Y> Y filter(Predicate<X> p, Y cons, Supplier<ConsAdapter<X, Y>> consAdapterYSupplier) {
+    public static <X, Y> Y filter(
+            Predicate<X> p,
+            Y cons, 
+            Supplier<ConsAdapter<X, Y>> consAdapterYSupplier
+    ) {
+        
         ConsAdapter<X, Y> adapterY = consAdapterYSupplier.get();
+        
         if (adapterY.isNil(cons)) {
             return adapterY.empty();
         }
@@ -156,10 +262,16 @@ public class Functors {
         X first = adapterY.getFirst(cons);
         
         if (p.test(first)) {
-            return adapterY.add(first, filter(p, adapterY.getRest(cons), consAdapterYSupplier));
+            return adapterY
+                    .add(first, 
+                         filter(p,
+                                adapterY.getRest(cons),
+                                consAdapterYSupplier));
         }
-        
-        return filter(p, adapterY.getRest(cons), consAdapterYSupplier);
+       
+        return filter(p,
+                      adapterY.getRest(cons),
+                      consAdapterYSupplier);
     }
     
     /**
@@ -205,8 +317,14 @@ public class Functors {
       * @param cons
       * @return
       */
-     public static <X, Y> Y foldr(Accumulator<X, Y> accumulator, Y base, Collection<X> cons) {
-         return foldr(accumulator, base, cons, Adapters::collectionConsAdapter);
+     public static <X, Y> Y foldr(BiFunction<X, Y, Y> accumulator,
+                                  Y base,
+                                  Collection<X> cons) {
+         
+         return foldr(accumulator,
+                      base,
+                      cons,
+                      Adapters::collectionConsAdapter);
      }
 
     /**
@@ -217,7 +335,7 @@ public class Functors {
      * @param adapterSupplier
      * @return
      */
-    public static <X, Y, Z> Z foldr(Accumulator<X, Z> accumulator, 
+    public static <X, Y, Z> Z foldr(BiFunction<X, Z, Z> accumulator, 
                                     Z base, 
                                     Y cons, 
                                     Supplier<ConsAdapter<X, Y>> adapterSupplier) {
@@ -228,8 +346,11 @@ public class Functors {
             return base;
         }
         
-        return accumulator.accumulate(adapter.getFirst(cons), 
-                                      foldr(accumulator, base, adapter.getRest(cons), adapterSupplier));
+        return accumulator.apply(adapter.getFirst(cons), 
+                                 foldr(accumulator,
+                                       base,
+                                       adapter.getRest(cons),
+                                       adapterSupplier));
         
     }
     
@@ -249,11 +370,11 @@ public class Functors {
      * @param adapterSupplier The supplier that's responsible for supplying the adapter for cons.
      * @return accumulated value 
      */
-    public static <X, Y, Z, T> X foldr(Accumulator<T, X> accumulator, 
-                                    Function<Z, T> converter, 
-                                    X base,
-                                    Y cons,
-                                    Supplier<ConsAdapter<Z, Y>> adapterSupplier) {
+    public static <X, Y, Z, T> X foldr(BiFunction<T, X, X> accumulator, 
+                                       Function<Z, T> converter, 
+                                       X base,
+                                       Y cons,
+                                       Supplier<ConsAdapter<Z, Y>> adapterSupplier) {
         
         ConsAdapter<Z, Y> adapter = adapterSupplier.get();
         
@@ -261,6 +382,11 @@ public class Functors {
             return base;
         }
         
-       return accumulator.accumulate(converter.apply(adapter.getFirst(cons)), foldr(accumulator, converter, base, adapter.getRest(cons), adapterSupplier));
+       return accumulator.apply(converter.apply(adapter.getFirst(cons)), 
+                               foldr(accumulator,
+                                     converter,
+                                     base,
+                                     adapter.getRest(cons),
+                                     adapterSupplier));
     }
 }
