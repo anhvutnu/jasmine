@@ -1,6 +1,7 @@
 package group.funsoft.jasmine;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +16,59 @@ import java.util.function.Supplier;
  *
  */
 public class Functors {
+    
+    /**
+     * 
+     * @param nestedCollection
+     * @return
+     */
+    public static <X> Collection<X> flatten(Collection<Collection<X>> nestedCollection) {
+        Collection<X> base = Collections.emptyList();
+        return foldr(Functors::combine, base, nestedCollection);
+    }
+    
+    /**
+     * 
+     * @param x
+     * @param y
+     * @return
+     */
+    public static <X> Collection<X> combine(Collection<X> x, Collection<X> y) {
+       return combine(x,
+                      y, 
+                      Adapters::collectionConsAdapter,
+                      Adapters::collectionConsAdapter,
+                      Adapters::collectionConsAdapter);
+    }
+    
+    /**
+     * 
+     * @param consX
+     * @param consY
+     * @param consAdapterXSupplier
+     * @param consAdapterYSupplier
+     * @param consAdapterZSupplier
+     * @return
+     */
+    public static <X, Y, Z, T> Z combine (X consX,
+                                          Y consY,
+                                          Supplier<ConsAdapter<T, X>> consAdapterXSupplier,
+                                          Supplier<ConsAdapter<T, Y>> consAdapterYSupplier,
+                                          Supplier<ConsAdapter<T, Z>> consAdapterZSupplier) {
+        
+        
+        BiFunction<T, Z, Z> combiner = (t, z) -> consAdapterZSupplier.get().add(t, z);
+        
+        return foldr(combiner, 
+                    (foldr(combiner,
+                           consAdapterZSupplier.get().empty(),
+                           consX,
+                           consAdapterXSupplier)),
+                     consY,
+                     consAdapterYSupplier);
+        
+        
+    }
     
     /**
      * 

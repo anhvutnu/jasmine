@@ -31,8 +31,18 @@ public interface ConsAdapter<X, Y> {
      */
     public boolean isNil(Y cons);
     
+    /**
+     * 
+     * @param value
+     * @param cons
+     * @return
+     */
     public Y add(X value, Y cons);
     
+    /**
+     * 
+     * @return
+     */
     public Y empty();
     
     
